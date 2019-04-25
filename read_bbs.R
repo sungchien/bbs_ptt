@@ -5,6 +5,7 @@ library(magrittr)
 library(purrr)
 library(lubridate)
 library(stringr)
+library(xml2)
 
 getTitle <- function (x) {
   tl <- character(2)
@@ -28,6 +29,24 @@ getDate <- function (x) {
 }
 checkDate <- function (x) {
   ifelse(is_empty(x), "", x)
+}
+
+getPostContent <- function(link, session) {
+  print(link)
+  post_html <- jump_to(session, link) %>%
+    read_html()
+  contents <- html_node(post_html, css="#main-content") %>%
+    xml_contents()
+  content_names <- html_name(contents)
+  content_text <- html_text(contents)
+  
+  metalines <- content_text[grepl("^article-metaline$", html_attr(contents, "class"))]
+  pd <- character(4)
+  pd[1:3] <- metalines
+  pd[4] <- str_trim(paste0(content_text[content_names=="text"], collapse=""))
+  
+  names(pd) <- c("author", "ptitle", "ptime", "ptext")
+  return(pd)
 }
 
 in_msg <- menu(c("一天", "一週", "一個月", "一年", "其他"), title="選擇一個時間範圍?")
@@ -113,9 +132,6 @@ while (!end_loop) {
 tot_title %<>%
   filter(!is.na(title))
 
-getPostContent <- function(link, session) {
-  post_html <- jump_to(session, link) %>%
-    read_html()
-  content_node <- html_node(post_html, css="#main-content") %>%
-    html_text()
-}
+tot_cont <- sapply(tot_title$link, getPostContent, session) %>%
+  t() %>%
+  as.data.frame()
