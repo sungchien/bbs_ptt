@@ -45,7 +45,7 @@ x1_day <- switch(in_msg,
 # set_cookie
 session <- html_session("https://www.ptt.cc/bbs/Gossiping/index.html",
                         set_cookies('over18'='1'))
-
+# 取得台劇版首頁資料
 session <- html_session("https://www.ptt.cc/bbs/TaiwanDrama/index.html")
 
 dir_html <- session %>%
@@ -108,4 +108,14 @@ while (!end_loop) {
   dir_html <- jump_to(session, paging_links[grepl("上頁", paging_text)]) %>%
     read_html()
   print(paging_links[grepl("上頁", paging_text)])
+}
+
+tot_title %<>%
+  filter(!is.na(title))
+
+getPostContent <- function(link, session) {
+  post_html <- jump_to(session, link) %>%
+    read_html()
+  content_node <- html_node(post_html, css="#main-content") %>%
+    html_text()
 }
