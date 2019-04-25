@@ -6,6 +6,7 @@ library(purrr)
 library(lubridate)
 library(stringr)
 library(xml2)
+library(xlsx)
 
 getTitle <- function (x) {
   tl <- character(2)
@@ -38,12 +39,17 @@ getPostContent <- function(link, session) {
   contents <- html_node(post_html, css="#main-content") %>%
     xml_contents()
   content_names <- html_name(contents)
+  content_class <- html_attr(contents, "class")
   content_text <- html_text(contents)
   
-  metalines <- content_text[grepl("^article-metaline$", html_attr(contents, "class"))]
   pd <- character(4)
-  pd[1:3] <- metalines
-  pd[4] <- str_trim(paste0(content_text[content_names=="text"], collapse=""))
+  metalines <- content_text[grepl("^article-metaline$", html_attr(contents, "class"))]
+  if (length(metalines)==3)
+    pd[1:3] <- sapply(metalines, function(x) substr(x, 3, nchar(x)))
+  
+  pd[4] <- str_trim(paste0(
+    content_text[content_names=="text"|(content_names=="span"&content_class=="hl")],
+    collapse=""))
   
   names(pd) <- c("author", "ptitle", "ptime", "ptext")
   return(pd)
@@ -86,7 +92,7 @@ while (!end_loop) {
   
   title_data <- sapply(post_nodes, getTitle) %>%
     t() %>%
-    as.data.frame()%>%
+    as.data.frame(stringsAsFactors=FALSE)%>%
     slice(bp:ep)
   
   date_data <- sapply(post_nodes, getDate) %>%
@@ -134,4 +140,10 @@ tot_title %<>%
 
 tot_cont <- sapply(tot_title$link, getPostContent, session) %>%
   t() %>%
-  as.data.frame()
+  as.data.frame(stringsAsFactors=FALSE)
+
+tot_pos <- cbind(tot_title, tot_cont)
+
+tot_pos$ptime <- parse_date_time(substr(tot_pos$ptime, 4, nchar(tot_pos$ptime[1])), "b d H M S Y", tz="")
+
+write.xlsx(tot_pos, "TaiwanDrama.xlsx")
