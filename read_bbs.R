@@ -42,7 +42,7 @@ getPostContent <- function(link, session) {
   content_class <- html_attr(contents, "class")
   content_text <- html_text(contents)
   
-  pd <- character(4)
+  pd <- character(7)
   metalines <- content_text[grepl("^article-metaline$", html_attr(contents, "class"))]
   if (length(metalines)==3)
     pd[1:3] <- sapply(metalines, function(x) substr(x, 3, nchar(x)))
@@ -51,7 +51,20 @@ getPostContent <- function(link, session) {
     content_text[content_names=="text"|(content_names=="span"&content_class=="hl")],
     collapse=""))
   
-  names(pd) <- c("author", "ptitle", "ptime", "ptext")
+  pd[5] = as.character(length(which(content_class=="push")))
+  
+  push_label <- html_nodes(contents, ".push-tag") %>%
+    html_text()
+  pd[6] <- as.character(length(which(grepl("推", push_label))))
+
+  pd[7] <- html_nodes(contents, ".push-userid") %>%
+    html_text(trim=TRUE) %>%
+    unique() %>%
+    length() %>%
+    as.character()
+
+  names(pd) <- c("author", "ptitle", "ptime", "ptext",
+                 "comment_no", "push_no", "commenter_no")
   return(pd)
 }
 
