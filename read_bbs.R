@@ -28,7 +28,15 @@ getDate <- function (x) {
   
   return(date_data)
 }
-checkDate <- function (x) {
+getAuthor <- function (x) {
+  author_data <- x %>%
+    html_nodes(css=".author") %>%
+    html_text() %>%
+    str_trim()
+  
+  return(author_data)
+}
+checkEmpty <- function (x) {
   ifelse(is_empty(x), "", x)
 }
 
@@ -63,7 +71,7 @@ getPostContent <- function(link, session) {
     length() %>%
     as.character()
 
-  names(pd) <- c("author", "ptitle", "ptime", "ptext",
+  names(pd) <- c("pauthor", "ptitle", "ptime", "ptext",
                  "comment_no", "push_no", "commenter_no")
   return(pd)
 }
@@ -109,7 +117,7 @@ while (!end_loop) {
     slice(bp:ep)
   
   date_data <- sapply(post_nodes, getDate) %>%
-    sapply(checkDate) %>%
+    sapply(checkEmpty) %>%
     `[`(bp:ep)
   
   poss_date <- as.Date(paste0(current_year,"/", date_data))
@@ -124,6 +132,10 @@ while (!end_loop) {
     title_data$post_date <- poss_date
   }
   
+  title_data$author <- sapply(post_nodes, getAuthor) %>%
+    sapply(checkEmpty) %>%
+    `[`(bp:ep)
+
   if (any(title_data$post_date < x1_day)) {
     title_data %<>%
       filter(post_date >= x1_day)
@@ -159,4 +171,4 @@ tot_pos <- cbind(tot_title, tot_cont)
 
 tot_pos$ptime <- parse_date_time(substr(tot_pos$ptime, 4, nchar(tot_pos$ptime[1])), "b d H M S Y", tz="")
 
-write.xlsx(tot_pos, "TaiwanDrama.xlsx")
+write.xlsx(tot_pos, "TaiwanDrama.xlsx", row.names=FALSE)
