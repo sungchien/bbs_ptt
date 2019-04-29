@@ -36,7 +36,7 @@ NGramGenerator <- function(df, n) {
 # 根據頻率及字串的樣式(pattern)判斷是否為可能的候選詞語
 CandidateSelector <- function(charstr, n) {
   # charstr為可能的候選詞(即NGram)，n為NGram的N
-  count.th <- 30
+  count.th <- 10
   
   lstr <- "^\\p{L}+"  # 全部為數字或文字組成的字串，若不是這種字串便需要排除
   estr <- "^[a-zA-Z]+" # 全部由英文字母組成的字串，須排除
@@ -47,7 +47,10 @@ CandidateSelector <- function(charstr, n) {
   lstr <- paste0(lstr, "$")
   estr <- paste0(estr, "$")
   
-  stopwords <- c("的", "在", "是", "都", "了", "也", "很", "會", "有", "呢", "嗎", "就", "但", "所", "不", "到", "要", "於")
+  stopwords <- c("的", "在", "是", "都", "了", "也", "很", "會",
+                 "有", "呢", "嗎", "就", "但", "所", "不", "到",
+                 "要", "於", "讓", "裡", "或", "能", "對", "過",
+                 "跟", "地", "著", "與", "說", "啊", "")
   
   charstr <- charstr %>%
     filter(c>count.th) %>% # 取出總頻次大於count.th的Ngram
@@ -132,4 +135,29 @@ fivegram <- NGramGenerator(post_df, 5) # 產生文本中所有Fivegram及其出�
 
 fourgram <- LRJointEstimator(fourgram, fivegram, 4) # 依據左右複雜度判斷Fourgram是否為可能的候選詞語
 
+##
+fivegram <- CandidateSelector(fivegram, 5) # 根據出現次數及字串的樣式(pattern)判斷Fivegram是否為可能的候選詞語
+
+sixgram <- NGramGenerator(post_df, 6) # 產生文本中所有Sixgram及其出現次數
+
+fivegram <- LRJointEstimator(fivegram, sixgram, 5) # 依據左右複雜度判斷Fivegram是否為可能的候選詞語
+
 #################
+# 合併所有候選詞語篩選結果
+dict <- data.frame() %>%
+  bind_rows(bigram) %>%
+  bind_rows(trigram) %>%
+  bind_rows(fourgram) %>%
+  bind_rows(fivegram) %>%
+  select(ngram)
+
+## 去除字串中的空白
+dict$ngram <- gsub("\\s", "", dict$ngram, perl=TRUE)
+
+dict %>%
+  filter(grepl("我", ngram))
+
+## 寫入檔案
+write.table(dict, file="TaiwanDrama.dict", quote=FALSE,
+            row.names=FALSE, col.names=FALSE, fileEncoding="UTF-8",
+            append=TRUE)
