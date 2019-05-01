@@ -4,10 +4,13 @@ library(wordcloud)
 library(readxl)
 library(igraph)
 
-post_df <- read_excel("TaiwanDrama.xlsx")
+post_df <- read_excel("TaiwanDrama.xlsx") %>%
+  mutate(keywd_in_ti=grepl("與惡", title),
+         keywd_in_tx=grepl("與惡", ptext)) %>%
+  mutate(rel=keywd_in_ti|keywd_in_tx)
 
-post_df %<>%
-  filter(grepl("與惡", title)|grepl("與惡", ptext))
+#post_df %<>%
+#  filter(grepl("與惡", title)|grepl("與惡", ptext))
 
 # 設定jieba斷詞器
 mp.seg <- worker(type="mp", user="TaiwanDrama.dict", bylines=TRUE)
@@ -16,11 +19,31 @@ mp.seg <- worker(type="mp", user="TaiwanDrama.dict", bylines=TRUE)
 post_df %<>%
   mutate(id=row_number()) %>%             # 每則發文加上編號(id)
   mutate(word=segment(ptext, mp.seg)) %>% # 斷詞
-  select(id, word) %>%                    # 選擇發文編號和斷詞結果
+  select(id, rel, word) %>%               # 選擇發文編號和斷詞結果
   unnest(word) %>%                        # 將斷詞結果展開
   filter(grepl("\\p{Han}+", word, perl=TRUE)) %>% # 保留至少一個中文字的詞語
   filter(nchar(word)>1)
 
+word.info <- post_df %>%
+  mutate(total.doc = n_distinct(id)) %>%
+  group_by(word, total.doc) %>%           # 統計詞語出現文件數
+  summarise(count=n(), doc=n_distinct(id))
+
+word.rel <- post_df %>%
+  filter(rel) %>%
+  mutate(rel_total.doc = n_distinct(id)) %>%
+  group_by(word, rel_total.doc) %>%           # 統計詞語出現文件數
+  summarise(rel_count=n(), rel_doc=n_distinct(id))
+
+word.info %>%
+  left_join(word.rel) %>%
+  filter(count>10) %>%
+  mutate(ir_total.doc=total.doc-rel_total.doc,
+         ir_doc=(doc-rel_doc)/ir_total.doc,
+         rel_doc=rel_doc/rel_total.doc) %>%
+  ggplot(aes(x=rel_doc, y=ir_doc)) +
+  geom_point()
+  mutate(pr_diff=rel_doc-doc)
 # 計算每個詞語idf(inverse document frequency)
 word.idf <- post_df %>%
   mutate(total.doc = n_distinct(id)) %>%  # 統計文件總數

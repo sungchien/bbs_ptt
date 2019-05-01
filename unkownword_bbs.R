@@ -6,8 +6,8 @@ library(tidytext)
 
 post_df <- read_excel("TaiwanDrama.xlsx")
 
-post_df %<>%
-  filter(grepl("與惡", title)|grepl("與惡", ptext))
+#post_df %<>%
+#  filter(grepl("與惡", title)|grepl("與惡", ptext))
 
 # 設定斷詞系統
 mp.seg <- worker(type="mp", symbol=TRUE)
