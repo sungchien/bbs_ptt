@@ -43,7 +43,16 @@ word.info %>%
          rel_doc=rel_doc/rel_total.doc) %>%
   ggplot(aes(x=rel_doc, y=ir_doc)) +
   geom_point()
-  mutate(pr_diff=rel_doc-doc)
+
+x <- word.info %>%
+  left_join(word.rel) %>%
+  filter(count>10) %>%
+  mutate(ir_total.doc=total.doc-rel_total.doc,
+         ir_doc=(doc-rel_doc)/ir_total.doc,
+         rel_doc=rel_doc/rel_total.doc) %>%
+  mutate(pr_diff=(rel_doc-ir_doc)/rel_doc) %>%
+  arrange(desc(pr_diff), desc(rel_count))
+
 # 計算每個詞語idf(inverse document frequency)
 word.idf <- post_df %>%
   mutate(total.doc = n_distinct(id)) %>%  # 統計文件總數
