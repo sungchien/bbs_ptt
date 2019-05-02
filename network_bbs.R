@@ -9,9 +9,6 @@ post_df <- read_excel("TaiwanDrama.xlsx") %>%
          keywd_in_tx=grepl("與惡", ptext)) %>%
   mutate(rel=keywd_in_ti|keywd_in_tx)
 
-#post_df %<>%
-#  filter(grepl("與惡", title)|grepl("與惡", ptext))
-
 # 設定jieba斷詞器
 mp.seg <- worker(type="mp", user="TaiwanDrama.dict", bylines=TRUE)
 
@@ -51,7 +48,9 @@ x <- word.info %>%
          ir_doc=(doc-rel_doc)/ir_total.doc,
          rel_doc=rel_doc/rel_total.doc) %>%
   mutate(pr_diff=(rel_doc-ir_doc)/rel_doc) %>%
-  arrange(desc(pr_diff), desc(rel_count))
+  filter(!is.na(rel_count)) %>%
+  filter(pr_diff>0) %>%
+  arrange(desc(rel_count), desc(pr_diff))
 
 # 計算每個詞語idf(inverse document frequency)
 word.idf <- post_df %>%

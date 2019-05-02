@@ -51,7 +51,7 @@ CandidateSelector <- function(charstr, n) {
                  "有", "呢", "嗎", "就", "但", "所", "不", "到",
                  "要", "於", "讓", "裡", "或", "能", "對", "過",
                  "跟", "地", "著", "與", "說", "啊", "去", "更",
-                 "這", "把", "而")
+                 "這", "把", "而", "以")
   
   charstr <- charstr %>%
     filter(c>count.th) %>% # 取出總頻次大於count.th的Ngram
