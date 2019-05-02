@@ -24,13 +24,15 @@ post_df %<>%
 word.info <- post_df %>%
   mutate(total.doc = n_distinct(id)) %>%
   group_by(word, total.doc) %>%           # 統計詞語出現文件數
-  summarise(count=n(), doc=n_distinct(id))
+  summarise(count=n(), doc=n_distinct(id)) %>%
+  ungroup()
 
 word.rel <- post_df %>%
   filter(rel) %>%
   mutate(rel_total.doc = n_distinct(id)) %>%
   group_by(word, rel_total.doc) %>%           # 統計詞語出現文件數
-  summarise(rel_count=n(), rel_doc=n_distinct(id))
+  summarise(rel_count=n(), rel_doc=n_distinct(id)) %>%
+  ungroup()
 
 word.info %>%
   left_join(word.rel) %>%
@@ -41,7 +43,7 @@ word.info %>%
   ggplot(aes(x=rel_doc, y=ir_doc)) +
   geom_point()
 
-x <- word.info %>%
+keyword <- word.info %>%
   left_join(word.rel) %>%
   filter(count>10) %>%
   mutate(ir_total.doc=total.doc-rel_total.doc,
@@ -49,56 +51,28 @@ x <- word.info %>%
          rel_doc=rel_doc/rel_total.doc) %>%
   mutate(pr_diff=(rel_doc-ir_doc)/rel_doc) %>%
   filter(!is.na(rel_count)) %>%
-  filter(pr_diff>0) %>%
-  arrange(desc(rel_count), desc(pr_diff))
-
-# 計算每個詞語idf(inverse document frequency)
-word.idf <- post_df %>%
-  mutate(total.doc = n_distinct(id)) %>%  # 統計文件總數
-  group_by(word, total.doc) %>%           # 統計詞語出現文件數
-  summarise(doc=n_distinct(id)) %>%
-  mutate(idf=log(total.doc/doc)) %>%      # 計算idf
-  ungroup()
-
-# 計算每個詞語在各個發文中的出現次數與頻率(tf)
-word.post <- post_df %>%
-  group_by(word, id) %>%    # 計算每個詞語在各個發文中的出現次數
-  summarise(c=n()) %>%
-  ungroup() %>%
-  group_by(id) %>%          # 計算各發文的詞語出現次數總和(sum(c))
-  mutate(tf=c/sum(c)) %>%   # 計算詞語的出現頻率(tf)
-  ungroup()
-
-# 計算tf*idf
-word.post %<>%
-  left_join(word.idf, by="word") %>%      # 連結idf資料
-  mutate(tfidf=tf*idf)                    # 計算
-
-# 計算詞語在所有發文的tfidf總和，做為詞語的重要性，並且選出前100個重要詞語
-keyword <- word.post %>%
-  filter(tfidf>0.01) %>%               # 去除發文中tfidf過低的詞語
-  group_by(word) %>%                   # 計算詞語在所有發文的tfidf總和
-  summarise(sum.tfidf=sum(tfidf)) %>%
-  top_n(100, sum.tfidf) %>%            # 選出前100個重要詞語
-  arrange(desc(sum.tfidf))
+  filter(pr_diff>0.8) %>%
+  top_n(100, rel_count) %>%
+  arrange(desc(rel_count))
 
 # 找出每則新聞中出現的重要詞語
-keyword.post <- word.post %>%
-  filter(tfidf>0.04) %>%             # 去除發文中tfidf過低的詞語
-  select(id, word) %>%
+keyword.post <- post_df %>%
+  filter(rel) %>%             # 去除發文中tfidf過低的詞語
+  group_by(id, word) %>%
+  summarise(count=n()) %>%
   semi_join(keyword, by="word") %>%  # 以重要詞語比對每個發文內容
   arrange(id)
 
 # 統計重要詞語出現的新聞數量
-kw_docs <- keyword.news %>%
+kw_docs <- keyword.post %>%
   group_by(word) %>%              # 統計重要詞語出現的文件數
   summarise(c=n_distinct(id)) %>%
   ungroup() %>%
   arrange(desc(c))
 
 # 計算重要詞語共同出現的新聞數量
-kw_codocs <- keyword.news %>%
-  inner_join(keyword.news, by=c("id")) %>% # 找出每一則新聞共同出現的重要詞語
+kw_codocs <- keyword.post %>%
+  inner_join(keyword.post, by=c("id")) %>% # 找出每一則新聞共同出現的重要詞語
   group_by(word.x, word.y) %>%             # 統計每一對重要詞語共同出現的新聞數量
   summarise(dxy=n()) %>%
   arrange(desc(dxy)) %>%                   # 按照共同出現的新聞數排序
@@ -181,7 +155,7 @@ phiCoefficient <- function(d, dx, dy, dxy) {
 }
 
 # 所有的關鍵詞語共出現在多少則新聞(d)
-d <- keyword.news %>%
+d <- keyword.post %>%
   distinct(id) %>%
   nrow()
 
