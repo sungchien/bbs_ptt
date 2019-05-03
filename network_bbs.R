@@ -87,8 +87,7 @@ kw_codocs <- kw_codocs %>%
   rename(dy=c)
 
 #########
-# 計算詞語共同出現的相關性
-# 本次課程以Jaccard similarity和Correlation Coefficient兩種方式計算
+# 以Jaccard similarity和Correlation Coefficient兩種方式計算詞語共同出現的相關性
 
 # Jaccard similarity
 jaccardSimilarity <- function(dx, dy, dxy) {
@@ -123,9 +122,18 @@ wg.js <- simplify(wg.js, edge.attr.comb = list("mean"))
 # 根據節點分群的結果為各節點設定顏色
 cl.js <- cluster_louvain(wg.js)
 cl.js.mem <-  membership(cl.js)
+mem.no <- length(unique(cl.js.mem))
+
+# 顏色
+vertex.color <- brewer.pal(mem.no, "Dark2")[cl.js.mem]
 
 # 計算各節點在圖形上的座標
 coords.js <- layout_(wg.js, with_graphopt())
+coords.js <- layout_(wg.js, with_fr())
+
+plot(wg.js, vertex.shape="none",
+     vertex.label.cex=0.8, vertex.label.color=vertex.color,
+     layout=coords.js)
 
 # 畫圖
 png(file="graph_js.png", width=800, height=600)
