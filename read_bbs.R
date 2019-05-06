@@ -76,6 +76,28 @@ getPostContent <- function(link, session) {
   return(pd)
 }
 
+getCommenter <- function(title, link, post_date, author, id, session) {
+  print(link)
+  post_html <- jump_to(session, link) %>%
+    read_html()
+  
+  comment_label <- html_nodes(post_html, ".push-tag") %>%
+    html_text()
+  
+  pd = data.frame()
+  if (length(comment_label)>0) {
+    commenter_id <- html_nodes(post_html, ".push-userid") %>%
+      html_text(trim=TRUE)
+    
+    pd = data.frame(id=id,
+                    author_id=author,
+                    commenter_id=commenter_id,
+                    comment_label=comment_label,
+                    stringsAsFactors = FALSE)
+  }
+  return(pd)
+}
+
 in_msg <- menu(c("一天", "一週", "一個月", "一年", "其他"), title="選擇一個時間範圍?")
 
 x_day <- Sys.Date()
@@ -161,7 +183,8 @@ while (!end_loop) {
 }
 
 tot_title %<>%
-  filter(!is.na(title))
+  filter(!is.na(title)) %>%
+  mutate(id=row_number())
 
 tot_cont <- sapply(tot_title$link, getPostContent, session) %>%
   t() %>%
@@ -172,3 +195,7 @@ tot_pos <- cbind(tot_title, tot_cont)
 tot_pos$ptime <- parse_date_time(substr(tot_pos$ptime, 4, nchar(tot_pos$ptime[1])), "b d H M S Y", tz="")
 
 write.xlsx(tot_pos, "TaiwanDrama.xlsx", row.names=FALSE)
+
+tot_commenter <- pmap_dfr(tot_title,  getCommenter, session)
+
+write.xlsx(tot_commenter, "TaiwanDrama_commenters.xlsx", row.names=FALSE)

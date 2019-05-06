@@ -52,7 +52,7 @@ term.rel_df = col_sums(dtm[post_df$rel, ]>0)/nrow(post_df[post_df$rel, ])
 term.ir_df = col_sums(dtm[!post_df$rel, ]>0)/nrow(post_df[!post_df$rel, ])
 term.pr_diff = (term.rel_df-term.ir_df)/term.rel_df
 
-cr1 <- term.rel_count>5
+cr1 <- term.rel_count>10
 length(which(cr1))
 cr2 <- term.pr_diff>0.8
 length(which(cr2))
@@ -79,7 +79,7 @@ stora <- searchK(documents=out$documents, vocab=out$vocab,
                  K=0, prevalence=~s(date_info),
                  data=out$meta)
 postFit <- stm(documents=out$documents, vocab=out$vocab,
-               K=5, prevalence=~s(date_info),
+               K=10, prevalence=~s(date_info),
                max.em.its=75, data=out$meta,
                init.type="Spectral")
 x <- labelTopics(postFit, n=10)
