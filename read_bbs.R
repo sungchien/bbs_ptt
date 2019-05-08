@@ -135,7 +135,7 @@ while (!end_loop) {
   
   title_data <- sapply(post_nodes, getTitle) %>%
     t() %>%
-    as.data.frame(stringsAsFactors=FALSE)%>%
+    as.data.frame(stringsAsFactors=FALSE) %>%
     slice(bp:ep)
   
   date_data <- sapply(post_nodes, getDate) %>%
@@ -143,7 +143,8 @@ while (!end_loop) {
     `[`(bp:ep)
   
   poss_date <- as.Date(paste0(current_year,"/", date_data))
-  prev_date <- c(poss_date[2:length(date_data)], x_day)
+  if (length(date_data)>1)  prev_date <- c(poss_date[2:length(date_data)], x_day)
+  else prev_date <- x_day
   if (any((poss_date-prev_date)>0)) {
     l_point <- which((poss_date-prev_date)>0)
     b_date <- as.Date(paste0(current_year,"/", date_data[(l_point+1):length(date_data)]))

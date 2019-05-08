@@ -4,6 +4,7 @@ library(purrr)
 library(lubridate)
 library(readxl)
 library(igraph)
+library(ggplot2)
 
 post_df <- read_excel("TaiwanDrama.xlsx") %>%
   mutate(comment_no=as.integer(comment_no),
@@ -57,6 +58,50 @@ print(paste("只參與發文的使用者帳號數：", length(which(in_deg==0)))
 # 同時有發文與推文的帳號數
 print(paste("同時有發文與推文的帳號數：",
             vcount(post_graph)-length(which(out_deg==0))-length(which(in_deg==0))))
+
+user_df <- data.frame(user_id= attr(V(post_graph), "names"),
+                      in_deg, out_deg,
+                      stringsAsFactors = FALSE)
+
+user_df1 <- user_df %>%
+  filter(in_deg>0 & out_deg>0)
+
+med_in <- median(user_df1$in_deg)*2
+med_out <- median(user_df1$out_deg)*2
+
+user_df1 %<>%
+  mutate(category=case_when(
+    in_deg<=med_in & out_deg<=med_out ~ "不活躍使用者",
+    in_deg<=med_in & out_deg>med_out ~ "偏向回應使用者",
+    in_deg>med_in & out_deg<=med_out ~ "偏向發言使用者",
+    in_deg>med_in & out_deg>med_out ~ "靈魂人物"
+  ))
+
+user_df2 <- user_df1 %>%
+  filter(in_deg>250 | out_deg>50) 
+
+
+user_df1 %>%
+  ggplot(aes(x=out_deg, y=in_deg)) +
+  geom_point(aes(color=category)) +
+  geom_text(aes(x=out_deg+5, y=in_deg, label=user_id),
+            data=user_df2) +
+  labs(x="回應帳號數", y="受回應帳號數")
+
+post_df %>%
+  filter(rel==TRUE) %>%
+  filter(author=="vk64sg13") %>%
+  select(title, ptext)
+
+post_df %>%
+  filter(rel==TRUE) %>%
+  mutate(author1=ifelse(author%in%c("sodabubble", "ttnakafzcm"), author, "others")) %>%
+  select(author1, post_date, comment_no, commenter_no, push_no) %>%
+  gather(int_type, value, -author1, -post_date) %>%
+  ggplot() +
+  geom_point(aes(x=post_date, y=value, color=author1), alpha=0.3) +
+  scale_x_date(date_breaks="1 week") +
+  facet_wrap(~int_type, nrow=3, scales="free")
 
 is_connected(post_graph, "weak")
 comp <- components(post_graph, "weak")
