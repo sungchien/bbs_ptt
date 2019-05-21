@@ -91,8 +91,26 @@ triad_census(active_user_g)
 
 # degree centrality
 
-in_deg <- degree(active_user_g, mode="in")
-out_deg <- degree(active_user_g, mode="out")
+user_df <- data.frame(user_id=V(active_user_g)$name,
+                      in_deg=degree(active_user_g, mode="in"),
+                      out_deg=degree(active_user_g, mode="out"),
+                      stringsAsFactors=FALSE)
+
+user_df %>%
+  top_n(10, in_deg) %>%
+  ggplot() +
+  geom_col(aes(x=reorder(user_id, in_deg), y=in_deg)) +
+  coord_flip()
+
+user_df %>%
+  top_n(10, out_deg) %>%
+  ggplot() +
+  geom_col(aes(x=reorder(user_id, out_deg), y=out_deg)) +
+  coord_flip()
+
+user_df %>%
+  ggplot() +
+  geom_text(aes(x=out_deg, y=in_deg, label=user_id))
 
 # author-hub
 
