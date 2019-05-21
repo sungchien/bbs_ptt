@@ -63,47 +63,28 @@ user_df <- data.frame(user_id= attr(V(post_graph), "names"),
                       in_deg, out_deg,
                       stringsAsFactors = FALSE)
 
-user_df1 <- user_df %>%
-  filter(in_deg>0 & out_deg>0)
+selected_vid <- user_df %>%
+  mutate(vid=row_number()) %>%
+  filter(in_deg>0 & out_deg>0) %>%
+  pull(vid)
 
-med_in <- median(user_df1$in_deg)*2
-med_out <- median(user_df1$out_deg)*2
+active_user_g <- induced_subgraph(post_graph, selected_vid)
 
-user_df1 %<>%
-  mutate(category=case_when(
-    in_deg<=med_in & out_deg<=med_out ~ "不活躍使用者",
-    in_deg<=med_in & out_deg>med_out ~ "偏向回應使用者",
-    in_deg>med_in & out_deg<=med_out ~ "偏向發言使用者",
-    in_deg>med_in & out_deg>med_out ~ "靈魂人物"
-  ))
+print(paste("共有多少節點：", gorder(active_user_g)))
+print(paste("共有多少連結：", gsize(active_user_g)))
+print(paste("密度：", edge_density(active_user_g)))
 
-user_df2 <- user_df1 %>%
-  filter(in_deg>250 | out_deg>50) 
+print(paste0("此網路彼此", ifelse(is_connected(active_user_g, "weak"), "相連", "不相連")))
 
+comp <- components(active_user_g, "weak")
+print(paste("弱相連：分為多少個部分：", comp$no))
+print(paste("最大的部分佔所有節點數比例：", max(comp$csize)/vcount(active_user_g)))
 
-user_df1 %>%
-  ggplot(aes(x=out_deg, y=in_deg)) +
-  geom_point(aes(color=category)) +
-  geom_text(aes(x=out_deg+5, y=in_deg, label=user_id),
-            data=user_df2) +
-  labs(x="回應帳號數", y="受回應帳號數")
+comp <- components(active_user_g, "strong")
+print(paste("強相連：分為多少個部分：", comp$no))
+print(paste("最大的部分佔所有節點數比例：", max(comp$csize)/vcount(active_user_g)))
 
-post_df %>%
-  filter(rel==TRUE) %>%
-  filter(author=="vk64sg13") %>%
-  select(title, ptext)
+print(paste("最長距離：", diameter(active_user_g)))
+print(paste("平均距離：", mean_distance(active_user_g)))
 
-post_df %>%
-  filter(rel==TRUE) %>%
-  mutate(author1=ifelse(author%in%c("sodabubble", "ttnakafzcm"), author, "others")) %>%
-  select(author1, post_date, comment_no, commenter_no, push_no) %>%
-  gather(int_type, value, -author1, -post_date) %>%
-  ggplot() +
-  geom_point(aes(x=post_date, y=value, color=author1), alpha=0.3) +
-  scale_x_date(date_breaks="1 week") +
-  facet_wrap(~int_type, nrow=3, scales="free")
-
-is_connected(post_graph, "weak")
-comp <- components(post_graph, "weak")
-print(paste("分為多少個部分：", comp$no))
-print(paste("最大的部分佔所有節點數比例：", max(comp$csize)/vcount(post_graph)))
+motifs(active_user_g)
