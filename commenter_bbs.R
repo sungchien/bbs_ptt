@@ -114,6 +114,7 @@ user_df <- data.frame(user_id=V(active_user_g)$name,
 user_df %>%
   ggplot() +
   geom_density(aes(x=in_deg)) +
+  scale_x_continuous(limits=c(0, 70), breaks=seq(0, 70, 10)) +
   scale_y_continuous(limits=c(0, 0.2), breaks=seq(0, 0.2, 0.02)) +
   labs(x="指入程度", y="密度", title="指入程度分布") +
   theme(panel.background=element_blank(),
@@ -126,7 +127,7 @@ user_df %>%
   mutate(rank=row_number(), cum_prob=cumsum(in_deg)/sum(in_deg)) %>%
   ggplot() +
   geom_line(aes(x=rank, y=cum_prob)) +
-  scale_x_continuous(breaks=seq(0, 200, 25)) +
+  scale_x_continuous(breaks=seq(0, 175, 25)) +
   scale_y_continuous(breaks=seq(0, 1, 0.1)) +
   labs(x="指入程度序別", y="指入程度累積") +
   theme(panel.background=element_blank(),
@@ -149,7 +150,7 @@ user_df %>%
   mutate(rank=row_number(), cum_prob=cumsum(out_deg)/sum(out_deg)) %>%
   ggplot() +
   geom_line(aes(x=rank, y=cum_prob)) +
-  scale_x_continuous(breaks=seq(0, 200, 25)) +
+  scale_x_continuous(breaks=seq(0, 175, 25)) +
   scale_y_continuous(breaks=seq(0, 1, 0.1)) +
   labs(x="指出程度序別", y="指出程度累積") +
   theme(panel.background=element_blank(),
@@ -157,10 +158,16 @@ user_df %>%
         panel.grid.minor=element_blank(),
         axis.line=element_line(color="grey80"))
 
+cpal <- choose_palette()
+user_df %<>%
+  mutate(level=cut(in_deg, breaks=seq(0, max(in_deg), max(in_deg)/7), labels=FALSE)) %>%
+  mutate(vcolor=cpal(7)[level])
+
 user_df %>%
   top_n(10, in_deg) %>%
   ggplot() +
-  geom_col(aes(x=reorder(user_id, in_deg), y=in_deg)) +
+  geom_col(aes(x=reorder(user_id, in_deg), y=in_deg, fill=vcolor)) +
+  scale_fill_identity() +
   scale_y_continuous(breaks=seq(0, 70, 10)) +
   coord_flip() +
   labs(x="使用者帳號", y="指入程度", title="指入程度前10的使用者帳號") +
@@ -169,10 +176,22 @@ user_df %>%
         panel.grid.minor=element_blank(),
         axis.line=element_line(color="grey80"))
 
+plot(active_user_g,
+     vertex.size=user_df$in_deg,
+     vertex.color=user_df$vcolor,
+     vertex.label=NA,
+     edge.arrow.size=0.3,
+     layout = layout_with_kk)
+
+user_df %<>%
+  mutate(level=cut(out_deg, breaks=seq(0, max(out_deg), max(out_deg)/7), labels=FALSE)) %>%
+  mutate(vcolor=cpal(7)[level])
+
 user_df %>%
   top_n(10, out_deg) %>%
   ggplot() +
-  geom_col(aes(x=reorder(user_id, out_deg), y=out_deg)) +
+  geom_col(aes(x=reorder(user_id, out_deg), y=out_deg, fill=vcolor)) +
+  scale_fill_identity() +
   scale_y_continuous(breaks=seq(0, 70, 10)) +
   coord_flip() +
   labs(x="使用者帳號", y="指出程度", title="指出程度前10的使用者帳號") +
@@ -180,6 +199,13 @@ user_df %>%
         panel.grid.major.x=element_line(color="grey80"),
         panel.grid.minor=element_blank(),
         axis.line=element_line(color="grey80"))
+
+plot(active_user_g,
+     vertex.size=user_df$out_deg,
+     vertex.color=user_df$vcolor,
+     vertex.label=NA,
+     edge.arrow.size=0.3,
+     layout = layout_with_kk)
 
 user_df %>%
   ggplot() +
