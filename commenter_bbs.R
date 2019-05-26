@@ -69,7 +69,8 @@ selected_vid <- user_df %>%
   filter(in_deg>0 & out_deg>0) %>%
   pull(vid)
 
-active_user_g <- induced_subgraph(post_graph, selected_vid)
+active_user_g <- induced_subgraph(post_graph, selected_vid) %>%
+  simplify()
 
 plot(active_user_g,
      vertex.size=10,
@@ -268,8 +269,7 @@ user_df %>%
         axis.line=element_line(color="grey80"))
 
 # coreness
-spal <- choose_palette()
-vcolor <- spal(12)[user_df$core]
+vcolor <- cpal(12)[user_df$core]
 plot(active_user_g,
      vertex.size=10,
      vertex.label=NA,
