@@ -159,10 +159,11 @@ user_df %>%
         panel.grid.minor=element_blank(),
         axis.line=element_line(color="grey80"))
 
-cpal <- choose_palette()
+cpal <- choose_palette(gui = "shiny")
 user_df %<>%
-  mutate(level=cut(in_deg, breaks=seq(0, max(in_deg), max(in_deg)/7), labels=FALSE)) %>%
-  mutate(vcolor=cpal(7)[level])
+  mutate(vcolor=cut(in_deg,
+                    breaks=seq(0, max(in_deg), max(in_deg)/7),
+                    labels=cpal(7)))
 
 user_df %>%
   top_n(10, in_deg) %>%
@@ -178,15 +179,16 @@ user_df %>%
         axis.line=element_line(color="grey80"))
 
 plot(active_user_g,
-     vertex.size=user_df$in_deg,
+     vertex.size=round(log2(user_df$in_deg)+1)*3,
      vertex.color=user_df$vcolor,
      vertex.label=NA,
-     edge.arrow.size=0.3,
+     edge.arrow.size=0.1,
      layout = layout_with_kk)
 
 user_df %<>%
-  mutate(level=cut(out_deg, breaks=seq(0, max(out_deg), max(out_deg)/7), labels=FALSE)) %>%
-  mutate(vcolor=cpal(7)[level])
+  mutate(vcolor=cut(out_deg,
+                    breaks=seq(0, max(out_deg), max(out_deg)/7),
+                    labels=cpal(7)))
 
 user_df %>%
   top_n(10, out_deg) %>%
@@ -202,15 +204,22 @@ user_df %>%
         axis.line=element_line(color="grey80"))
 
 plot(active_user_g,
-     vertex.size=user_df$out_deg,
+     vertex.size=round(log2(user_df$out_deg)+1)*3,
      vertex.color=user_df$vcolor,
      vertex.label=NA,
      edge.arrow.size=0.3,
      layout = layout_with_kk)
 
+user_df %<>%
+  mutate(vcolor=cut(in_deg+out_deg,
+                   breaks=seq(0, max(in_deg+out_deg), max(in_deg+out_deg)/7),
+                   labels=cpal(7)))
+
 user_df %>%
   ggplot() +
-  geom_text(aes(x=out_deg, y=in_deg, label=user_id)) +
+  geom_text(aes(x=out_deg, y=in_deg, label=user_id,
+                color=vcolor)) +
+  scale_color_identity() +
   labs(x="指出程度", y="指入程度", title="各使用者帳號的指入與指出程度") +
   theme(panel.background=element_blank(),
         panel.grid.major=element_line(color="grey80"),
@@ -218,11 +227,17 @@ user_df %>%
         axis.line=element_line(color="grey80"))
 
 # betweenness centrality
+user_df %<>%
+  mutate(vcolor=cut(btw,
+                   breaks=seq(0, max(btw), max(btw)/7),
+                   labels=cpal(7)))
+
 user_df %>%
   top_n(10, btw) %>%
   ggplot() +
-  geom_col(aes(x=reorder(user_id, btw), y=btw)) +
+  geom_col(aes(x=reorder(user_id, btw), y=btw, fill=vcolor)) +
   #  scale_y_continuous(breaks=seq(0, 70, 10)) +
+  scale_fill_identity() +
   coord_flip() +
   labs(x="使用者帳號", y="中介性", title="中介性前10的使用者帳號") +
   theme(panel.background=element_blank(),
@@ -231,11 +246,16 @@ user_df %>%
         axis.line=element_line(color="grey80"))
 
 # eigenvector centrailty
+user_df %<>%
+  mutate(vcolor=cut(eig,
+                    breaks=seq(0, max(eig), max(eig)/7),
+                    labels=cpal(7)))
 user_df %>%
   top_n(10, eig) %>%
   ggplot() +
-  geom_col(aes(x=reorder(user_id, eig), y=eig)) +
+  geom_col(aes(x=reorder(user_id, eig), y=eig, fill=vcolor)) +
   #  scale_y_continuous(breaks=seq(0, 70, 10)) +
+  scale_fill_identity() +
   coord_flip() +
   labs(x="使用者帳號", y="特徵中心性", title="特徵中心性前10的使用者帳號") +
   theme(panel.background=element_blank(),
@@ -244,11 +264,16 @@ user_df %>%
         axis.line=element_line(color="grey80"))
 
 # authority-hub
+user_df %<>%
+  mutate(vcolor=cut(aut,
+                    breaks=seq(0, max(aut), max(aut)/7),
+                    labels=cpal(7)))
 user_df %>%
   top_n(10, aut) %>%
   ggplot() +
-  geom_col(aes(x=reorder(user_id, aut), y=aut)) +
+  geom_col(aes(x=reorder(user_id, aut), y=aut, fill=vcolor)) +
   #  scale_y_continuous(breaks=seq(0, 70, 10)) +
+  scale_fill_identity() +
   coord_flip() +
   labs(x="使用者帳號", y="authority", title="authority score前10的使用者帳號") +
   theme(panel.background=element_blank(),
@@ -256,11 +281,16 @@ user_df %>%
         panel.grid.minor=element_blank(),
         axis.line=element_line(color="grey80"))
 
+user_df %<>%
+  mutate(vcolor=cut(hub,
+                    breaks=seq(0, max(hub), max(hub)/7),
+                    labels=cpal(7)))
 user_df %>%
   top_n(10, hub) %>%
   ggplot() +
-  geom_col(aes(x=reorder(user_id, hub), y=hub)) +
+  geom_col(aes(x=reorder(user_id, hub), y=hub, fill=vcolor)) +
   #  scale_y_continuous(breaks=seq(0, 70, 10)) +
+  scale_fill_identity() +
   coord_flip() +
   labs(x="使用者帳號", y="hub", title="hub score前10的使用者帳號") +
   theme(panel.background=element_blank(),
@@ -277,4 +307,81 @@ plot(active_user_g,
      edge.arrow.size=0.3,
      layout = layout_with_kk)
 
-# 
+# community detection
+mu_edges <- which_mutual(active_user_g)
+mutual_user_g <- as.undirected(active_user_g, mode="mutual")
+
+plot(mutual_user_g,
+     vertex.size=10,
+     vertex.label=NA,
+     layout = layout_with_kk)
+
+comp <- components(mutual_user_g)
+mutual_user_g <- induced_subgraph(mutual_user_g, V(mutual_user_g)[comp$membership==1])
+
+plot(mutual_user_g,
+     vertex.size=10,
+     vertex.label=NA,
+     layout = layout_with_kk)
+
+cpal <-  choose_palette(gui = "shiny")
+
+comm <- cluster_louvain(mutual_user_g)
+vcolor <- cpal(max(comm$membership))[comm$membership]
+plot(mutual_user_g,
+     vertex.size=10,
+     vertex.color=vcolor,
+     vertex.label=comm$membership,
+     layout = layout_with_kk)
+print(paste("modularity:", modularity(comm)))
+
+comm <- cluster_edge_betweenness(mutual_user_g)
+vcolor <- cpal(max(comm$membership))[comm$membership]
+plot(mutual_user_g,
+     vertex.size=10,
+     vertex.color=vcolor,
+     vertex.label=comm$membership,
+     layout = layout_with_kk)
+print(paste("modularity:", modularity(comm)))
+plot_dendrogram(comm, mode="dendrogram", use.modularity=TRUE)
+plot_dendrogram(comm, mode="hclust", use.modularity=TRUE)
+plot_dendrogram(comm, mode="phylo", use.modularity=TRUE)
+
+comm <- cluster_label_prop(mutual_user_g)
+vcolor <- cpal(max(comm$membership))[comm$membership]
+plot(mutual_user_g,
+     vertex.size=10,
+     vertex.color=vcolor,
+     vertex.label=comm$membership,
+     layout = layout_with_kk)
+print(paste("modularity:", modularity(comm)))
+
+comm <- cluster_fast_greedy(mutual_user_g)
+vcolor <- cpal(max(comm$membership))[comm$membership]
+plot(mutual_user_g,
+     vertex.size=10,
+     vertex.color=vcolor,
+     vertex.label=comm$membership,
+     layout = layout_with_kk)
+print(paste("modularity:", modularity(comm)))
+plot_dendrogram(comm, mode="dendrogram", use.modularity=TRUE)
+plot_dendrogram(comm, mode="hclust", use.modularity=TRUE)
+plot_dendrogram(comm, mode="phylo", use.modularity=TRUE)
+
+comm <- cluster_leading_eigen(mutual_user_g)
+vcolor <- cpal(max(comm$membership))[comm$membership]
+plot(mutual_user_g,
+     vertex.size=10,
+     vertex.color=vcolor,
+     vertex.label=comm$membership,
+     layout = layout_with_kk)
+print(paste("modularity:", modularity(comm)))
+
+comm <- cluster_spinglass(mutual_user_g)
+vcolor <- cpal(max(comm$membership))[comm$membership]
+plot(mutual_user_g,
+     vertex.size=10,
+     vertex.color=vcolor,
+     vertex.label=comm$membership,
+     layout = layout_with_kk)
+print(paste("modularity:", modularity(comm)))
