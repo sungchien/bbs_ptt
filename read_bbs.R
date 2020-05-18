@@ -42,58 +42,98 @@ checkEmpty <- function (x) {
 
 getPostContent <- function(link, session) {
   print(link)
-  post_html <- jump_to(session, link) %>%
-    read_html()
-  contents <- html_node(post_html, css="#main-content") %>%
-    xml_contents()
-  content_names <- html_name(contents)
-  content_class <- html_attr(contents, "class")
-  content_text <- html_text(contents)
+  post_html <- tryCatch(
+    {
+      jump_to(session, link) %>%
+        read_html()
+    },
+    error=function(cond) {
+      message(paste("URL does not seem to exist:", link))
+      message("Here's the original error message:")
+      message(cond)
+      # Choose a return value in case of error
+      return(NA)
+    },
+    warning=function(cond) {
+      message(paste("URL caused a warning:", link))
+      message("Here's the original warning message:")
+      message(cond)
+      # Choose a return value in case of warning
+      return(NA)
+    }
+  )
   
   pd <- character(7)
-  metalines <- content_text[grepl("^article-metaline$", html_attr(contents, "class"))]
-  if (length(metalines)==3)
-    pd[1:3] <- sapply(metalines, function(x) substr(x, 3, nchar(x)))
-  
-  pd[4] <- str_trim(paste0(
-    content_text[content_names=="text"|(content_names=="span"&content_class=="hl")],
-    collapse=""))
-  
-  pd[5] = as.character(length(which(content_class=="push")))
-  
-  push_label <- html_nodes(contents, ".push-tag") %>%
-    html_text()
-  pd[6] <- as.character(length(which(grepl("推", push_label))))
-
-  pd[7] <- html_nodes(contents, ".push-userid") %>%
-    html_text(trim=TRUE) %>%
-    unique() %>%
-    length() %>%
-    as.character()
-
   names(pd) <- c("pauthor", "ptitle", "ptime", "ptext",
                  "comment_no", "push_no", "commenter_no")
+  if (!is.na(post_html)) {
+    contents <- html_node(post_html, css="#main-content") %>%
+      xml_contents()
+    content_names <- html_name(contents)
+    content_class <- html_attr(contents, "class")
+    content_text <- html_text(contents)
+    
+    metalines <- content_text[grepl("^article-metaline$", html_attr(contents, "class"))]
+    if (length(metalines)==3)
+      pd[1:3] <- sapply(metalines, function(x) substr(x, 3, nchar(x)))
+    
+    pd[4] <- str_trim(paste0(
+      content_text[content_names=="text"|(content_names=="span"&content_class=="hl")],
+      collapse=""))
+    
+    pd[5] = as.character(length(which(content_class=="push")))
+    
+    push_label <- html_nodes(contents, ".push-tag") %>%
+      html_text()
+    pd[6] <- as.character(length(which(grepl("推", push_label))))
+    
+    pd[7] <- html_nodes(contents, ".push-userid") %>%
+      html_text(trim=TRUE) %>%
+      unique() %>%
+      length() %>%
+      as.character()
+  }
   return(pd)
 }
 
 getCommenter <- function(title, link, post_date, author, id, session) {
   print(link)
-  post_html <- jump_to(session, link) %>%
-    read_html()
+  pd <- data.frame()
+  post_html <- tryCatch(
+    {
+      jump_to(session, link) %>%
+        read_html()
+    },
+    error=function(cond) {
+      message(paste("URL does not seem to exist:", link))
+      message("Here's the original error message:")
+      message(cond)
+      # Choose a return value in case of error
+      return(NA)
+    },
+    warning=function(cond) {
+      message(paste("URL caused a warning:", link))
+      message("Here's the original warning message:")
+      message(cond)
+      # Choose a return value in case of warning
+      return(NA)
+    }
+  )
   
-  comment_label <- html_nodes(post_html, ".push-tag") %>%
-    html_text()
-  
-  pd = data.frame()
-  if (length(comment_label)>0) {
-    commenter_id <- html_nodes(post_html, ".push-userid") %>%
-      html_text(trim=TRUE)
+  if (!is.na(post_html)) {
+    comment_label <- html_nodes(post_html, ".push-tag") %>%
+      html_text()
     
-    pd = data.frame(id=id,
-                    author_id=author,
-                    commenter_id=commenter_id,
-                    comment_label=comment_label,
-                    stringsAsFactors = FALSE)
+    if (length(comment_label)>0) {
+      commenter_id <- html_nodes(post_html, ".push-userid") %>%
+        html_text(trim=TRUE)
+      
+      pd = data.frame(id=id,
+                      author_id=author,
+                      commenter_id=commenter_id,
+                      comment_label=comment_label,
+                      stringsAsFactors = FALSE)
+    }
   }
   return(pd)
 }
@@ -191,6 +231,9 @@ write_csv(tot_title, "Gossiping2020_title.csv")
 
 tot_title <- read_csv("Gossiping2020_title.csv")
 
+tot_title <- tot_title %>%
+  filter(post_date>=as.Date("2020-01-11") & post_date<as.Date("2020-02-01"))
+
 tot_cont <- sapply(tot_title$link, getPostContent, session) %>%
   t() %>%
   as.data.frame(stringsAsFactors=FALSE)
@@ -199,7 +242,7 @@ tot_pos <- cbind(tot_title, tot_cont)
 
 tot_pos$ptime <- parse_date_time(substr(tot_pos$ptime, 4, nchar(tot_pos$ptime[1])), "b d H M S Y", tz="")
 
-write.xlsx(tot_pos, "Gossiping2020_content.xlsx", row.names=FALSE)
+write.xlsx(tot_pos, "Gossiping2020_content_jan_2.xlsx", row.names=FALSE)
 
 tot_commenter <- pmap_dfr(tot_title,  getCommenter, session)
 
