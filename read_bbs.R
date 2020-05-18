@@ -187,6 +187,10 @@ tot_title %<>%
   filter(!is.na(title)) %>%
   mutate(id=row_number())
 
+write_csv(tot_title, "Gossiping2020_title.csv")
+
+tot_title <- read_csv("Gossiping2020_title.csv")
+
 tot_cont <- sapply(tot_title$link, getPostContent, session) %>%
   t() %>%
   as.data.frame(stringsAsFactors=FALSE)
@@ -195,8 +199,8 @@ tot_pos <- cbind(tot_title, tot_cont)
 
 tot_pos$ptime <- parse_date_time(substr(tot_pos$ptime, 4, nchar(tot_pos$ptime[1])), "b d H M S Y", tz="")
 
-write.xlsx(tot_pos, "TaiwanDrama.xlsx", row.names=FALSE)
+write.xlsx(tot_pos, "Gossiping2020_content.xlsx", row.names=FALSE)
 
 tot_commenter <- pmap_dfr(tot_title,  getCommenter, session)
 
-write.xlsx(tot_commenter, "TaiwanDrama_commenters.xlsx", row.names=FALSE)
+write.xlsx(tot_commenter, "Gossiping2020_commenters.xlsx", row.names=FALSE)
