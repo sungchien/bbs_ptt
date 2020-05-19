@@ -242,7 +242,7 @@ tot_pos <- cbind(tot_title, tot_cont)
 
 tot_pos$ptime <- parse_date_time(substr(tot_pos$ptime, 4, nchar(tot_pos$ptime[1])), "b d H M S Y", tz="")
 
-write.xlsx(tot_pos, "Gossiping2020_content_jan_2.xlsx", row.names=FALSE)
+write_csv(tot_pos, "Gossiping2020_content_jan_2.csv")
 
 tot_commenter <- pmap_dfr(tot_title,  getCommenter, session)
 
